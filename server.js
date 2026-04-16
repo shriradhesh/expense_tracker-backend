@@ -9,6 +9,7 @@ import authRoutes from './src/routes/authRoutes.js';
 import expenseRoutes from './src/routes/expenseRoutes.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
 
+// Load environment variables
 dotenv.config();
 
 const app = express();
@@ -23,7 +24,7 @@ app.use(cors({
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 100, 
   message: 'Too many requests from this IP, please try again later.'
 });
@@ -32,7 +33,11 @@ app.use('/api', limiter);
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
+
+// Logging
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+}
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -40,35 +45,84 @@ app.use('/api/expenses', expenseRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'Server is running' });
+  const dbState = mongoose.connection.readyState;
+  const dbStatus = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  };
+  
+  res.status(200).json({ 
+    status: 'OK', 
+    database: dbStatus[dbState] || 'unknown',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Expense Tracker API',
+    version: '1.0.0',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
 });
 
 // Error handling middleware
 app.use(errorHandler);
 
+// MongoDB connection - FIXED VERSION
+const connectDB = async () => {
+  const mongoURI = process.env.MONGODB_URI;
+  
+  if (!mongoURI) {
+    console.error('❌ MONGODB_URI is not defined');
+    return false;
+  }
 
+  console.log('🔍 Connecting to MongoDB...');
+  
+  // Simple options without deprecated parameters
+  const options = {
+    serverSelectionTimeoutMS: 5000,
+    family: 4, // Force IPv4
+  };
+  
+  try {
+    await mongoose.connect(mongoURI, options);
+    console.log('✅ Connected to MongoDB successfully!');
+    console.log(`📦 Database: ${mongoose.connection.db.databaseName}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Connection error:', error.message);
+    return false;
+  }
+};
+
+// Connect to database
+connectDB();
+
+// Connection event listeners
+mongoose.connection.on('connected', () => {
+  console.log('✅ MongoDB connected');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('❌ MongoDB error:', err.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('⚠️ MongoDB disconnected');
+});
+
+// Start server
 if (process.env.NODE_ENV !== 'production') {
-  // Local development
-  mongoose.connect(process.env.MONGODB_URI)
-    .then(() => {
-      console.log('Connected to MongoDB');
-      app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-      });
-    })
-    .catch((error) => {
-      console.error('MongoDB connection error:', error);
-      process.exit(1);
-    });
-} else {
-  // Vercel deployment
-  mongoose.connect(process.env.MONGODB_URI)
-    .then(() => {
-      console.log('Connected to MongoDB (Vercel)');
-    })
-    .catch((error) => {
-      console.error('MongoDB connection error:', error);
-    });
+  app.listen(PORT, () => {
+    console.log(`\n🚀 Server running on port ${PORT}`);
+    console.log(`📍 Environment: ${process.env.NODE_ENV}`);
+    console.log(`📍 API URL: http://localhost:${PORT}\n`);
+  });
 }
 
 export default app;
