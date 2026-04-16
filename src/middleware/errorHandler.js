@@ -1,7 +1,7 @@
 import { STATUS_CODES } from '../constants/statusCodes.js';
 import { MESSAGES } from '../constants/messages.js';
 
-export const errorHandler = (err, req, res) => {
+export const errorHandler = (err, req, res, next) => {
   console.error(err.stack);
   
   // Mongoose duplicate key error
