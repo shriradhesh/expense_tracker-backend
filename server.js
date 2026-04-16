@@ -77,11 +77,11 @@ const connectDB = async () => {
   const mongoURI = process.env.MONGODB_URI;
   
   if (!mongoURI) {
-    console.error('❌ MONGODB_URI is not defined');
+    console.error(' MONGODB_URI is not defined');
     return false;
   }
 
-  console.log('🔍 Connecting to MongoDB...');
+  console.log(' Connecting to MongoDB...');
   
   // Simple options without deprecated parameters
   const options = {
@@ -91,11 +91,11 @@ const connectDB = async () => {
   
   try {
     await mongoose.connect(mongoURI, options);
-    console.log('✅ Connected to MongoDB successfully!');
-    console.log(`📦 Database: ${mongoose.connection.db.databaseName}`);
+    console.log(' Connected to MongoDB successfully!');
+    console.log(` Database: ${mongoose.connection.db.databaseName}`);
     return true;
   } catch (error) {
-    console.error('❌ Connection error:', error.message);
+    console.error(' Connection error:', error.message);
     return false;
   }
 };
@@ -105,23 +105,23 @@ connectDB();
 
 // Connection event listeners
 mongoose.connection.on('connected', () => {
-  console.log('✅ MongoDB connected');
+  console.log('MongoDB connected');
 });
 
 mongoose.connection.on('error', (err) => {
-  console.error('❌ MongoDB error:', err.message);
+  console.error(' MongoDB error:', err.message);
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.log('⚠️ MongoDB disconnected');
+  console.log(' MongoDB disconnected');
 });
 
 // Start server
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
-    console.log(`\n🚀 Server running on port ${PORT}`);
-    console.log(`📍 Environment: ${process.env.NODE_ENV}`);
-    console.log(`📍 API URL: http://localhost:${PORT}\n`);
+    console.log(`\n Server running on port ${PORT}`);
+    console.log(` Environment: ${process.env.NODE_ENV}`);
+    console.log(` API URL: http://localhost:${PORT}\n`);
   });
 }
 
